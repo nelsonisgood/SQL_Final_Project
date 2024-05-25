@@ -5,6 +5,9 @@ import streamlit as st
 import os
 import mysql.connector
 import google.generativeai as genai
+from xml2sql.xmlutils.xml2sql import xml2sql
+import tempfile
+import time
 
 ## Configure Genai Key
 
@@ -70,6 +73,7 @@ st.header("NL2SQL converter with Gemini pro")
 ## 設定文字輸入框，label 為 widget 的顯示文字，key 是 widget 的 ID
 question=st.text_input(label="Input: ",key="input")
 
+in_xml = st.file_uploader('Import XML file', type=['xml'])
 
 # if enter is clicked
 if question:
@@ -80,5 +84,22 @@ if question:
     st.subheader(response)
     st.subheader("The Response is")
     for row in output:
-        print(row)
+        print(type(row))
         st.subheader(row)
+        
+if in_xml is not None:
+    # 取得檔名
+    f_n = in_xml.name
+    f_n = f_n.split(".")[0]
+    # # 輸出SQL檔路徑
+    path = os.getcwd()
+    output_sql = os.path.join(path, f"{f_n}.sql")
+    print(output_sql)
+    # 輸入XML檔的路徑
+    temp_dir = tempfile.mkdtemp()
+    input_path = os.path.join(temp_dir, in_xml.name)
+    with open(input_path, "wb") as f:
+                f.write(in_xml.getvalue())
+    print(input_path)
+    converter = xml2sql(input_path, output_sql)
+    converter.convert(tag="item", table=f_n)
