@@ -1,26 +1,49 @@
 from dotenv import load_dotenv
 load_dotenv() ## load all the environemnt variables
-
 import streamlit as st
 import os
 import mysql.connector
 import google.generativeai as genai
-import tempfile
-import time
 import re
 
 ## Configure Genai Key
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
+safety_settings = [
+    {
+        "category": "HARM_CATEGORY_DANGEROUS",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+        "threshold": "BLOCK_NONE",
+    },
+]
+
 ## Load model
-model=genai.GenerativeModel('gemini-pro')
+model=genai.GenerativeModel('gemini-pro', safety_settings=safety_settings)
 
 ## Function To Load Google Gemini Model and provide queries as response
 def get_gemini_response(question, prompt, db_contents):
-    contents = [prompt[0], db_contents, question]
+    contents = [prompt[0], question, db_contents]
     response = model.generate_content(contents)
-    return response.text
+    if response:
+        return response.text
+    else:
+        return str('')
 
 
 ## Fucntion To retrieve query from the database
@@ -99,11 +122,11 @@ prompt=[
     You are an expert in converting questions to mySQL query, 
     and no matter what, your response must be valid mysql command.
     \n
+    also you must confirm the mysql command perfectly fit the database you're using before you respond.
+    \n
     also the sql code should not have ``` in beginning or end and sql word in output.
     \n
-    Now I am going to ask you question about the certain database.
-    \n
-    the below content is the database to be used:
+    the database info I would like to search from is as follow
     """
 
 ]
@@ -111,7 +134,7 @@ prompt=[
 ## Streamlit App
 
 st.set_page_config(page_title="I can convert you sentense to MySQL query!")
-st.header("Lazy-Man's Database Management System")
+st.header("Lazy-man's database management system")
 
 ## 設定文字輸入框，label 為 widget 的顯示文字，key 是 widget 的 ID
 question=st.text_input(label="Input: ",key="input")
@@ -120,6 +143,7 @@ question=st.text_input(label="Input: ",key="input")
 choice = read_sql_query('show databases', None)
 choice_list = list()
 table_names = []
+views_names = []
 db = str()
 for i in range(len(choice)):
     choice_list.append(choice[i][0])
@@ -134,6 +158,9 @@ if db_option:
     renew_DB(state='ALL DB', db=db)
     all_db_content = read_DB(state='ALL DB')
     table_names = re.findall(r'CREATE TABLE `(\w+)`', all_db_content)
+    views_names = re.findall(r'CREATE VIEW `(\w+)`', all_db_content)
+    st.markdown(f':orange[Tables] in :blue[{db}] are  {table_names}')
+    st.markdown(f':green[Views] in :blue[{db}] are  {views_names}')
     for table in table_names:
         renew_DB(state='TABLE', db=db, table_name=table)
 
