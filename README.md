@@ -1,2 +1,4 @@
-run the app_editable_query to start the lazy-man's app
+Run the app_editable_query.py to start the Lazy-man's app
+
+
 // streamlit run app_editable_query.py
