@@ -1,4 +1,0 @@
-aspose-cells
-aspose-cells-python
-tabula-py
-csv2sql
